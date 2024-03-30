@@ -35,7 +35,7 @@ export default function App() {
 
   return (
     <div className="App">
-      <h1 className='my-3 text-center'>Cotización de acciones en tiempo real</h1>
+      <h1 className='mt-3 mb-5 text-center'>Cotización de acciones en tiempo real</h1>
       <div className='c-stocks'>
         {/* <div>
           <div className="btn-group">
