@@ -1,55 +1,46 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
 import { IStock, getAllStocks, getStockByParams } from './service/stocks.service';
-// import Paginator from './components/Paginator';
-// import StockDetails from './components/StockDetail';
 import { Link } from 'react-router-dom';
 import SearchBar from './components/SearchBar';
-
-const ITEMS_PER_PAGE = 25;
+import Paginator from './components/Paginator';
 
 export default function App() {
-  const [stocks, setStocks] = useState<IStock[]>([]);
-  // const [currentPage, setCurrentPage] = useState(1);
-  // const [filteredStocks, setFilteredStocks] = useState<IStock[]>([]);
-  // const [selectedFilter, setSelectedFilter] = useState<string>('Name');
-  // const [filterValue, setFilterValue] = useState('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [allStocks, setAllStocks] = useState<IStock[]>([]);
+  const itemsPerPage = 50;
 
   useEffect(() => {
     getAllStocks().then(res => {
-      return setStocks(res.data);
-      // setFilteredStocks(res.data); 
+      setAllStocks(res.data);
+      setCurrentPage(1); 
     });
   }, []);
 
-  // const handlePageChange = (page: number) => {
-  //   setCurrentPage(page);
-  // };
-
-  const handleSearch = (filterType:'exchange' | 'symbol', value:string) => {
+  const handleSearch = (filterType: 'exchange' | 'symbol', value: string) => {
     getStockByParams(filterType, value).then(res => {
-      return setStocks(res.data);
+      setAllStocks(res.data);
+      setCurrentPage(1);
     });
-
   };
+
+  const onPageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const paginateStocks = (items: IStock[], pageNumber: number, pageSize: number) => {
+    const startIndex = (pageNumber - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return items.slice(startIndex, endIndex);
+  };
+
+  const displayedStocks = paginateStocks(allStocks, currentPage, itemsPerPage);
 
   return (
     <div className="App">
       <h1 className='mt-3 mb-5 text-center'>Cotización de acciones en tiempo real</h1>
       <div className='c-stocks'>
-        {/* <div>
-          <div className="btn-group">
-            <button className="btn btn-secondary btn-lg dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-              Filter by: {selectedFilter}
-            </button>
-            <div className="dropdown-menu">
-              <button className="dropdown-item" type="button" onClick={() => handleFilter('Name')}>Name</button>
-              <button className="dropdown-item" type="button" onClick={() => handleFilter('Symbol')}>Symbol</button>
-            </div>
-          </div>
-        </div>
-        <input type="text" value={filterValue} onChange={handleInputChange} /> */}
-         <SearchBar handleSearch={handleSearch} />
+        <SearchBar handleSearch={handleSearch} />
         <table className='c-stocks__table'>
           <thead>
             <tr>
@@ -61,7 +52,7 @@ export default function App() {
             </tr>
           </thead>
           <tbody>
-            {stocks?.map((stock, i) => (
+            {displayedStocks.map((stock, i) => (
               <tr key={i}>
                 <td>
                   <Link to={{
@@ -78,7 +69,11 @@ export default function App() {
           </tbody>
         </table>
       </div>
-      {/* <Paginator currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} /> */}
+      <Paginator
+        currentPage={currentPage}
+        totalPages={Math.ceil(allStocks.length / itemsPerPage)}
+        onPageChange={onPageChange}
+      />
     </div>
   );
 }

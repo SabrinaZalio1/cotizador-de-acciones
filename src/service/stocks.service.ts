@@ -45,7 +45,8 @@ const baseUrl = 'https://api.twelvedata.com';
 const api_key = '232f9a552ada4768a73c83bbc80ec388';
 
 const paths = {
-    stocks: '/stocks?country=arg',
+    // could not find a way to bring all the stocks without the site crashing, so i filtered by a country
+    stocks: '/stocks?country=usa',
     timeSeries: '/time_series'
 }
 
@@ -60,26 +61,28 @@ export const getAllStocks = async () => {
     }
 }
 
-export const getStockByParams = async (param:'exchange' | 'symbol', value:string) => {
-    // todo: then change & for ?
-    const url = `${baseUrl}${paths.stocks}&${param}=${value}`
+export const getStockByParams = async (param: 'exchange' | 'symbol', value: string) => {
+    const url = `${baseUrl}${paths.stocks}&${param}=${value}`;
     try {
-        const response = await axios.get<IStockResponse>(url)
-        return response.data
+      const response = await axios.get<IStockResponse>(url);
+      return response.data;
     } catch (error) {
-        console.log(error)
-        throw new Error('Error getting the stock')
+      throw new Error('Error getting the stock');
     }
-}
+  };
 
-export const getTimeSeries = async (symbol:string,interval:string) => {
-    const url = `${baseUrl}${paths.timeSeries}?symbol=${symbol}&interval=${interval}&apikey=${api_key}`
+export const getTimeSeries = async (symbol:string,interval:string, historic?:{startDate:string, endDate:string}) => {
+    const url = `${baseUrl}${paths.timeSeries}`
+    //delimeted to 1000 because high chart does not support more
+    const params = `?symbol=${symbol}&interval=${interval}&apikey=${api_key}&outputsize=1000`
+    const optionalParams = historic && `&start_date=${historic.startDate}&end_date=${historic.endDate}`
+
+    const finalUrl = `${url}${params}${optionalParams ? optionalParams : ''}`
 
     try {
-        const response = await axios.get<ITimeSeries>(url)
+        const response = await axios.get<ITimeSeries>(finalUrl)
         return response.data
     } catch (error) {
-        console.log(error)
         throw new Error('Error getting the stock')
     }
 }

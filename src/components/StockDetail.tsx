@@ -5,6 +5,7 @@ import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { formatStarAndEndDate } from '../utils/date.formatter';
 
 interface IStockValue {
     close: string;
@@ -19,27 +20,20 @@ const StockDetails: React.FC = () => {
     const location = useLocation();
     const [stockDataState, setStockDataState] = useState<IStock | undefined>(undefined);
     const [selectedInterval, setSelectedInterval] = useState<string>('1min');
-    const [stockValues, setStockValues] = useState<any>('')
 
-    const [stockXAndY, setStockXAndY] = useState<{x: any, y: any}[]>([])
+    const [stockXAndY, setStockXAndY] = useState<{x:Date, y:number}[]>([])
 
     const { name, exchange } = stockDataState ?? {};
-    const [date, setDate] = useState<any>(null);
-    const [startDate, setStartDate] = useState();
-    const [endDate, setEndDate] = useState();
+
+    const [time, setTime] = useState<{startTime: Date | null, endTime: Date | null}>({startTime: null, endTime: null })
 
     const intervals = ['1min', '5min', '15min'];
-
-    // 
     const [realTime, setRealTime] = useState(true);
-    // const [historylTime, setHistorylTime] = useState({ active: false, startDate: '', finishDate: '' });
-    // 
 
     useEffect(() => {
         const locationState = location.state as ILocationState | undefined;
         if (locationState) {
             const { stockData } = locationState;
-            console.log('Stock Data:', stockData);
             setStockDataState(stockData);
         }
     }, []);
@@ -49,23 +43,20 @@ const StockDetails: React.FC = () => {
     };
 
     const print = () => {
-        getTimeSeries(stockDataState?.symbol!, selectedInterval)
+        const historic = ((time.startTime && time.endTime) && !realTime) ? formatStarAndEndDate(time): undefined;
+
+        getTimeSeries(stockDataState?.symbol!, selectedInterval, historic)
             .then(res => {
                 const { values } = res;
-                console.log(values)
-                const data = values.map((val) => {
-                    return { x: new Date(val.datetime), y: Number(val.high) }
+                console.log('va',values)
+                const data:typeof stockXAndY = []
+                values?.forEach(({datetime,high}) => {
+                    if(datetime && high) data.push({ x: new Date(datetime), y: Number(high) })
                 })
-                setStockXAndY(data)
-
-                const highStockValues = res.values.map((stock: IStockValue) => Number(stock.high));
-                setStockValues(highStockValues);
-
-                
+                setStockXAndY(data)                
             });
     };
 
-    console.log('stockValues', stockValues)
 
     const options = {
         title: {
@@ -88,20 +79,6 @@ const StockDetails: React.FC = () => {
             type: 'datetime',
             
         },
-        //     type: 'datetime',
-        //     tickInterval: selectedInterval === '1min' ? 60 * 1000 : selectedInterval === '5min' ? 5 * 60 * 1000 : selectedInterval === '15min' ? 15 * 60 * 1000 : undefined,
-        //     labels: {
-        //         format: '{value:%H:%M}'
-        //     },
-        //     dateTimeLabelFormats: {
-        //         minute: '%H:%M',
-        //         hour: '%H:%M',
-        //         day: '%e. %b',
-        //         week: '%e. %b',
-        //         month: '%b \'%y',
-        //         year: '%Y'
-        //     }
-        // },
         responsive: {
             rules: [{
                 condition: {
@@ -122,24 +99,30 @@ const StockDetails: React.FC = () => {
                 </label>
             </div>
             <div className="form-check my-3">
-                <input className="form-check-input" type="radio" name="flexRadioDefault2" id="flexRadioDefault2" />
-                <label className="form-check-label" htmlFor="flexRadioDefault2">
+                <input className="form-check-input" type="radio" name="flexRadioDefault1" id="flexRadioDefault1" checked={!realTime}  />
+                <label className="form-check-label" htmlFor="flexRadioDefault1">
                     Historico
                 </label>
                 <div>
                     <DatePicker
                         selectsStart
-                        selected={startDate}
-                        onChange={(date:any) => setStartDate(date)}
-                        startDate={startDate}
+                        selected={time.startTime}
+                        onChange={(date) => {
+                            setRealTime(false)
+                            return date && setTime({...time, startTime: date})}
+                    }
+                        startDate={time.startTime}
                     />
                     <DatePicker
                         selectsEnd
-                        selected={endDate}
-                        onChange={(date:any) =>setEndDate(date)}
-                        endDate={endDate}
-                        startDate={startDate}
-                        minDate={startDate}
+                        selected={time.endTime}
+                        onChange={(date) => {
+                            setRealTime(false)
+                            return date && setTime({...time, endTime: date})}
+                    }
+                        endDate={time.endTime}
+                        startDate={time.startTime}
+                        minDate={time.startTime}
                     />
                 </div>
             </div>
