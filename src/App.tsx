@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css';
 import { IStock, getAllStocks, getStockByParams } from './service/stocks.service';
 import { Link } from 'react-router-dom';

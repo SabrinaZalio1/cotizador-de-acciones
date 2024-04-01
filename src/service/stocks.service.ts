@@ -1,4 +1,5 @@
 import axios from "axios";
+import { formatDate } from "../utils/date.formatter";
 
 export interface IStock {
     country: string;
@@ -71,14 +72,14 @@ export const getStockByParams = async (param: 'exchange' | 'symbol', value: stri
     }
   };
 
-export const getTimeSeries = async (symbol:string,interval:string, historic?:{startDate:string, endDate:string}) => {
+export const getTimeSeries = async (symbol:string, interval:string, historic?: { startDate:string, endDate:string }) => {
     const url = `${baseUrl}${paths.timeSeries}`
-    //delimeted to 1000 because high chart does not support more
+    // delimeted to 1000 because high chart does not support more
     const params = `?symbol=${symbol}&interval=${interval}&apikey=${api_key}&outputsize=1000`
-    const optionalParams = historic && `&start_date=${historic.startDate}&end_date=${historic.endDate}`
+    const optionalParams = historic ? `&start_date=${historic.startDate}&end_date=${historic.endDate}` : `&date=${formatDate(new Date())}`
 
     const finalUrl = `${url}${params}${optionalParams ? optionalParams : ''}`
-
+    console.log(finalUrl)
     try {
         const response = await axios.get<ITimeSeries>(finalUrl)
         return response.data

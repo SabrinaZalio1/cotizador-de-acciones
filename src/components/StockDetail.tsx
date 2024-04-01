@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { IStock, ILocationState, getTimeSeries } from '../service/stocks.service';
 import Highcharts from 'highcharts';
 import HighchartsReact from 'highcharts-react-official';
@@ -7,28 +7,19 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { formatStarAndEndDate } from '../utils/date.formatter';
 
-interface IStockValue {
-    close: string;
-    datetime: string;
-    high: string;
-    low: string;
-    open: string;
-    volume: string;
-}
 const StockDetails: React.FC = () => {
-
     const location = useLocation();
-    const [stockDataState, setStockDataState] = useState<IStock | undefined>(undefined);
-    const [selectedInterval, setSelectedInterval] = useState<string>('1min');
 
-    const [stockXAndY, setStockXAndY] = useState<{x:Date, y:number}[]>([])
+    const [stockDataState, setStockDataState] = useState<IStock | undefined>(undefined);
+    const [realTime, setRealTime] = useState(true);
+    const [isDataAvailable, setIsDataAvailable] = useState(false)
+    const [selectedInterval, setSelectedInterval] = useState<'1min'| '5min' | '15min' | string>('1min');
+    const [stockXAndY, setStockXAndY] = useState<{ x: Date, y: number }[]>([])
+    const [time, setTime] = useState<{ startTime: Date | null, endTime: Date | null }>({ startTime: null, endTime: null })
 
     const { name, exchange } = stockDataState ?? {};
 
-    const [time, setTime] = useState<{startTime: Date | null, endTime: Date | null}>({startTime: null, endTime: null })
-
     const intervals = ['1min', '5min', '15min'];
-    const [realTime, setRealTime] = useState(true);
 
     useEffect(() => {
         const locationState = location.state as ILocationState | undefined;
@@ -38,25 +29,31 @@ const StockDetails: React.FC = () => {
         }
     }, []);
 
-    const handleIntervalChange = (interval: string) => {
+    const handleIntervalChange = (interval: typeof selectedInterval) => {
         setSelectedInterval(interval);
     };
 
     const print = () => {
-        const historic = ((time.startTime && time.endTime) && !realTime) ? formatStarAndEndDate(time): undefined;
+        const historic = ((time.startTime && time.endTime) && !realTime) ? formatStarAndEndDate(time) : undefined;
 
         getTimeSeries(stockDataState?.symbol!, selectedInterval, historic)
             .then(res => {
                 const { values } = res;
-                console.log('va',values)
-                const data:typeof stockXAndY = []
-                values?.forEach(({datetime,high}) => {
-                    if(datetime && high) data.push({ x: new Date(datetime), y: Number(high) })
+                const data: typeof stockXAndY = [];
+
+                if (!values) {
+                    setIsDataAvailable(false);
+                    return;
+                }
+
+                values.forEach(({ datetime, high }) => {
+                    if (datetime && high) data.push({ x: new Date(datetime), y: Number(high) })
                 })
-                setStockXAndY(data)                
+
+                setIsDataAvailable(true)
+                setStockXAndY(data)
             });
     };
-
 
     const options = {
         title: {
@@ -71,13 +68,13 @@ const StockDetails: React.FC = () => {
                 text: 'Cotizacion'
             },
             labels: {
-                format: '{value}°'
+                format: '{value}k'
             },
 
         },
         xAxis: {
             type: 'datetime',
-            
+
         },
         responsive: {
             rules: [{
@@ -86,8 +83,8 @@ const StockDetails: React.FC = () => {
                 }
             }]
         },
-
     }
+
     return (
         <div className='p-5'>
             <h2 className='mb-5'>Stock Details for: {name}</h2>
@@ -99,7 +96,7 @@ const StockDetails: React.FC = () => {
                 </label>
             </div>
             <div className="form-check my-3">
-                <input className="form-check-input" type="radio" name="flexRadioDefault1" id="flexRadioDefault1" checked={!realTime}  />
+                <input className="form-check-input" type="radio" name="flexRadioDefault1" id="flexRadioDefault1" checked={!realTime} />
                 <label className="form-check-label" htmlFor="flexRadioDefault1">
                     Historico
                 </label>
@@ -109,8 +106,9 @@ const StockDetails: React.FC = () => {
                         selected={time.startTime}
                         onChange={(date) => {
                             setRealTime(false)
-                            return date && setTime({...time, startTime: date})}
-                    }
+                            return date && setTime({ ...time, startTime: date })
+                        }
+                        }
                         startDate={time.startTime}
                     />
                     <DatePicker
@@ -118,8 +116,9 @@ const StockDetails: React.FC = () => {
                         selected={time.endTime}
                         onChange={(date) => {
                             setRealTime(false)
-                            return date && setTime({...time, endTime: date})}
-                    }
+                            return date && setTime({ ...time, endTime: date })
+                        }
+                        }
                         endDate={time.endTime}
                         startDate={time.startTime}
                         minDate={time.startTime}
@@ -140,14 +139,16 @@ const StockDetails: React.FC = () => {
                     </div>
                 </div>
             </div>
-            <button type="button" className="btn btn-secondary my-5" onClick={print}>Graficar</button>
+            <div className='mb-5'>
+                <button type="button" className="btn btn-secondary my-5" onClick={print}>Graficar</button>
+            </div>
 
-
-            <HighchartsReact
-                highcharts={Highcharts}
-                options={options}
-            />
-
+            {isDataAvailable ?
+                <HighchartsReact
+                    highcharts={Highcharts}
+                    options={options}
+                />
+                : <span>No data available</span>}
         </div>
     );
 };
